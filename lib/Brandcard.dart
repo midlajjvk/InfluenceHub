@@ -5,6 +5,10 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'influencer/Home/detailedcard.dart';
 
 class BrandList extends StatelessWidget {
+  final String searchQuery; // Added search query parameter
+
+  BrandList({required this.searchQuery});
+
   Future<List<Map<String, dynamic>>> fetchBrands() async {
     QuerySnapshot<Map<String, dynamic>> snapshot =
     await FirebaseFirestore.instance.collection('brands').get();
@@ -21,6 +25,11 @@ class BrandList extends StatelessWidget {
         'website': data['website'] ?? '',
         'extraDetails': data['extraDetails'] ?? '',
       };
+    }).where((brand) {
+      final brandName = brand['brandName'].toString().toLowerCase();
+      final category = brand['category'].toString().toLowerCase();
+      final query = searchQuery.toLowerCase();
+      return brandName.contains(query) || category.contains(query);
     }).toList();
   }
 
@@ -35,7 +44,11 @@ class BrandList extends StatelessWidget {
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
-              child: Text('No brands found', style: TextStyle(color: Colors.white)));
+            child: Text(
+              'No brands found',
+              style: TextStyle(color: Colors.white),
+            ),
+          );
         }
 
         List<Map<String, dynamic>> brands = snapshot.data!;

@@ -19,6 +19,8 @@ class HomeUser extends StatefulWidget {
 }
 
 class _HomeUserState extends State<HomeUser> {
+  TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
   int _currentIndex = 0;
   late Future<Map<String, dynamic>> userDetailsFuture;
   final List<Widget> _pages = [];
@@ -27,16 +29,22 @@ class _HomeUserState extends State<HomeUser> {
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.trim().toLowerCase();
+      });
+    });
     userDetailsFuture = fetchUserDetails(widget.userId);
     _pages.addAll([
-      BrandList(),
+      BrandList(
+        searchQuery: '',
+      ),
       ProfilePage(userId: widget.userId),
       SettingsPage(context),
     ]);
     _fetchNotifications();
   }
 
-  // Fetch user details from Firestore
   Future<Map<String, dynamic>> fetchUserDetails(String userId) async {
     try {
       DocumentSnapshot<Map<String, dynamic>> snapshot = await FirebaseFirestore
@@ -55,22 +63,19 @@ class _HomeUserState extends State<HomeUser> {
     }
   }
 
-  // Fetch the count of new notifications (accepted collab requests)
   void _fetchNotifications() async {
     FirebaseFirestore.instance
         .collection('notifications')
         .where('influencerId', isEqualTo: widget.userId)
-        .where('seen', isEqualTo: false) // ✅ Only count unseen notifications
+        .where('seen', isEqualTo: false)
         .snapshots()
         .listen((querySnapshot) {
       setState(() {
-        _notificationCount =
-            querySnapshot.docs.length; // ✅ Dynamically update UI
+        _notificationCount = querySnapshot.docs.length;
       });
     });
   }
 
-  // Open the notification list
   void _showNotifications() {
     Get.bottomSheet(
       Container(
@@ -85,10 +90,8 @@ class _HomeUserState extends State<HomeUser> {
         ),
         child: Column(
           children: [
-            Text(
-              "Notifications",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
+            Text("Notifications",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             SizedBox(height: 10),
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -101,15 +104,12 @@ class _HomeUserState extends State<HomeUser> {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
                   }
-
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return Center(child: Text("No notifications yet."));
                   }
-
                   return ListView(
                     children: snapshot.data!.docs.map((doc) {
                       var data = doc.data() as Map<String, dynamic>;
-
                       return ListTile(
                         leading:
                             Icon(Icons.notifications, color: Colors.purple),
@@ -146,21 +146,11 @@ class _HomeUserState extends State<HomeUser> {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              "Influence Hub",
-              style: GoogleFonts.kaushanScript(
+        title: Text("Influence Hub",
+            style: GoogleFonts.kaushanScript(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(width: 10),
-            ImageIcon(AssetImage("assets/icons/img.png"), color: Colors.orange),
-          ],
-        ),
+                color: Colors.white)),
         centerTitle: true,
         backgroundColor: Colors.black,
         iconTheme: IconThemeData(color: Colors.white),
@@ -182,11 +172,9 @@ class _HomeUserState extends State<HomeUser> {
                       borderRadius: BorderRadius.circular(5),
                     ),
                     constraints: BoxConstraints(minWidth: 10, minHeight: 10),
-                    child: Text(
-                      '$_notificationCount',
-                      style: TextStyle(color: Colors.white, fontSize: 8),
-                      textAlign: TextAlign.center,
-                    ),
+                    child: Text('$_notificationCount',
+                        style: TextStyle(color: Colors.white, fontSize: 8),
+                        textAlign: TextAlign.center),
                   ),
                 ),
             ],
@@ -200,58 +188,40 @@ class _HomeUserState extends State<HomeUser> {
             return Drawer();
           } else if (snapshot.hasError || !snapshot.hasData) {
             return Drawer(
-              child: Center(child: Text('Error loading user details')),
-            );
+                child: Center(child: Text('Error loading user details')));
           } else {
             final userName = snapshot.data!['fullName'];
             return AppDrawer(
-              userId: widget.userId,
-              userName: userName,
-              onLogout: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Logged out successfully.')),
-                );
-              },
-              onShowSettings: () {
-                setState(() {
-                  _currentIndex = 2;
-                });
-              },
-            );
+                userId: widget.userId,
+                userName: userName,
+                onLogout: () {},
+                onShowSettings: () {});
           }
         },
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          TextFormField(
-            style: TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              hintText: "Search Here..",
-              hintStyle: TextStyle(color: Colors.grey),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-            ),
-          ),
-          Expanded(child: _pages[_currentIndex]),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: TextButton(
-              onPressed: () {
-                Navigator.pushReplacement(context,
-                    MaterialPageRoute(builder: (context) => SaveDataPage()));
-              },
-              child: Text(
-                "Do you own a brand? \n "
-                "        Add it now",
-                style: TextStyle(color: Colors.purple[100], fontSize: 10),
-              ),
-            ),
-          ),
-        ],
-      ),
+      body: _currentIndex == 0
+          ? Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(10),
+                  child: TextField(
+                    controller: _searchController,
+                    style: TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(Icons.search, color: Colors.white),
+                      hintText: "Search by brand name or category...",
+                      hintStyle: TextStyle(color: Colors.grey),
+                      filled: true,
+                      fillColor: Colors.grey[900],
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
+                ),
+                Expanded(child: BrandList(searchQuery: _searchQuery)),
+              ],
+            )
+          : _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.black,
         currentIndex: _currentIndex,
