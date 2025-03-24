@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "491794031269",
+    "project_id": "influencehub-7b9ab",
+    "storage_bucket": "influencehub-7b9ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:491794031269:android:98900d71f19354c8ea634c",
+        "android_client_info": {
+          "package_name": "com.example.influencehub"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8xIcEY2kcR2Dtj7Lgf5nyYVCf7IwFjfU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
