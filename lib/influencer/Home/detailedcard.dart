@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-
 import '../../chat/chat.dart';
 
 class BrandDetailCardPage extends StatelessWidget {
@@ -21,8 +20,15 @@ class BrandDetailCardPage extends StatelessWidget {
     required this.productName,
     required this.userId,
   });
+
   String getCurrentUserId() {
     return FirebaseAuth.instance.currentUser?.uid ?? "";
+  }
+
+  String _getChatId(String user1, String user2) {
+    List<String> ids = [user1, user2];
+    ids.sort();
+    return '${ids[0]}_${ids[1]}';
   }
 
   Future<void> sendCollabRequest() async {
@@ -66,6 +72,9 @@ class BrandDetailCardPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String influencerId = getCurrentUserId();
+    String chatId = _getChatId(influencerId, brandId);
+
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(color: Colors.white),
@@ -104,10 +113,10 @@ class BrandDetailCardPage extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   Get.to(() => ChatScreen(
-                        influencerId: getCurrentUserId(),
-                        brandId: brandId,
-                        brandName: brandName,
-                      ));
+                    chatId: chatId,
+                    otherUserId: brandId,
+                    chatName: brandName,
+                  ));
                 },
                 child: Text("Chat"),
                 style: ElevatedButton.styleFrom(
@@ -118,9 +127,7 @@ class BrandDetailCardPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10)),
                 ),
               ),
-              SizedBox(
-                height: 10,
-              ),
+              SizedBox(height: 10),
               ElevatedButton(
                 onPressed: sendCollabRequest,
                 child: Text("Request Collab"),

@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:influencehub/brand/collabreqpage.dart';
 import '../../UserCard.dart';
@@ -9,6 +8,7 @@ import '../SignUpBrand/SignupDetails.dart';
 import 'profilepagebrand.dart';
 import 'settingsbrand.dart';
 import 'drawer.dart';
+import '../../chat/chatlistbrand.dart'; // Import ChatsListPage
 
 class BrandHomePage extends StatefulWidget {
   final String name;
@@ -30,6 +30,26 @@ class _BrandHomePageState extends State<BrandHomePage> {
         .snapshots()
         .map((snapshot) => snapshot.docs.length);
   }
+
+  Stream<int> getUnreadMessageCount() {
+    return FirebaseFirestore.instance
+        .collection('chats')
+        .where('participants', arrayContains: widget.brandId)
+        .snapshots()
+        .asyncMap((snapshot) async {
+      int unreadCount = 0;
+      for (var chatDoc in snapshot.docs) {
+        final messages = await chatDoc.reference
+            .collection('messages')
+            .where('senderId', isNotEqualTo: widget.brandId)
+            .where('isRead', isEqualTo: false)
+            .get();
+        unreadCount += messages.docs.length;
+      }
+      return unreadCount;
+    });
+  }
+
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -77,8 +97,36 @@ class _BrandHomePageState extends State<BrandHomePage> {
               );
             },
           ),
+          StreamBuilder<int>(
+            stream: getUnreadMessageCount(),
+            builder: (context, snapshot) {
+              int unreadCount = snapshot.data ?? 0;
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Get.to(() => ChatsListPage(brandId: widget.brandId));
+                    },
+                    icon: Icon(Icons.chat),
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 10,
+                      top: 10,
+                      child: CircleAvatar(
+                        radius: 8,
+                        backgroundColor: Colors.red,
+                        child: Text(
+                          unreadCount.toString(),
+                          style: TextStyle(fontSize: 12, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
         ],
-
         title: Text('Influence Hub',
             style: GoogleFonts.kaushanScript(
               fontSize: 24,
@@ -88,26 +136,24 @@ class _BrandHomePageState extends State<BrandHomePage> {
         centerTitle: true,
         iconTheme: IconThemeData(color: Colors.white),
         backgroundColor: Colors.black,
-
       ),
-      drawer:
-          BrandDrawer(onItemSelected: _onItemTapped, userId: widget.brandId),
+      drawer: BrandDrawer(onItemSelected: _onItemTapped, userId: widget.brandId),
       body: _pages[_selectedIndex],
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          SignupDetails(brandId: widget.brandId)),
-                );
-              },
-              label: Text('Add New Product',
-                  style: TextStyle(
-                      color: Colors.purple[100], fontWeight: FontWeight.bold)),
-              backgroundColor: Colors.black,
-            )
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) =>
+                    SignupDetails(brandId: widget.brandId)),
+          );
+        },
+        label: Text('Add New Product',
+            style: TextStyle(
+                color: Colors.purple[100], fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.black,
+      )
           : null,
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.black,
